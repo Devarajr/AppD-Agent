@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+# Init file for AppDynamics Machine Agent
+#
+# chkconfig: 2345 60 25
+# description: machine agent for AppDynamics
+
+
+#CHANGE ME: Set to the agent's install directory
+AGENT_HOME="{{appd_machineAgent_home}}"
+
+#CHANGE ME: Set to the Java install directory
+JAVA_HOME="$AGENT_HOME/jre"
+
+# CHANGE ME: Set to the machine agent runtime user
+# If not running the machine agent as root, we recommend running as
+# the same user ID as other applications you are monitoring with
+# AppDynamics
+RUNUSER=root
+
+
+# Agent Options
+AGENT_OPTIONS=""
+AGENT_OPTIONS="$AGENT_OPTIONS -Dappdynamics.agent.logging.dir="
+#AGENT_OPTIONS="$AGENT_OPTIONS -Dmetric.http.listener=true | false
+AGENT_OPTIONS="$AGENT_OPTIONS -Dappdynamics.controller.port={{controller_info.port}}"
+AGENT_OPTIONS="$AGENT_OPTIONS -Dappdynamics.controller.hostName={{controller_info.host}}"
+AGENT_OPTIONS="$AGENT_OPTIONS -Dappdynamics.agent.accountName={{controller_info.accountName}}"
+AGENT_OPTIONS="$AGENT_OPTIONS -Dappdynamics.agent.accountAccessKey={{controller_info.accountAccessKey}}"
