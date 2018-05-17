@@ -1,0 +1,23 @@
+---
+
+appd_home: /opt/AppD
+appd_template_home: /home/ga61342/test/AppD/templates
+appd_user: root
+#appd_user: ga61342
+appd_group: root
+#appd_group: unixapps
+
+appd_app_agent_file: AppServerAgent-4.4.3.22593.zip
+appd_machine_agent_file: machineagent-bundle-64bit-linux-4.4.3.1214.zip
+
+appd_app_agent_version: 4.4.3.22593
+appd_machine_agent_version: 4.4.3.1214
+
+Dappdynamics.agent.logging.dir :
+
+
+controller:     { "PIT" : {"host" : "rc-lx****.ut.dentegra.lab", "port" : "9090", "accountName" : "PIT", "accountAccessKey" : "****"} ,
+                  "MOT" : {"host" : "rc-lx****.ut.dentegra.lab", "port" : "9090", "accountName" : "MOT", "accountAccessKey" : "****"} ,
+                  "DDM" : {"host" : "rc-lx****.ut.dentegra.lab", "port" : "9090", "accountName" : "DDM", "accountAccessKey" : "****"} ,
+                  "PRD" : {"host" : "prod***.deltads.ent",      "port" : "80"  , "accountName" : "",    "accountAccessKey" : "*****"} ,
+}
