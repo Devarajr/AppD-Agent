@@ -1,0 +1,195 @@
+---
+- name: AppD Agent installation
+  hosts: local
+  #hosts: myservers
+  user: '{{appd_user}}'
+  #gather_facts: no
+  #become: True
+  #become_method: sudo
+  #become_user: root
+
+  vars:
+    appd_appAgent_home: "{{appd_home}}/AppDynamicsAppAgent"
+    appd_machineAgent_home: "{{appd_home}}/AppDynamicsMachineAgent"
+    
+    appd_appAgent_link: "{{appd_home}}/AppDynamicsAppAgent_{{appd_app_agent_version}}"
+    appd_machineAgent_link: "{{appd_home}}/AppDynamicsMachineAgent_{{appd_machine_agent_version}}"
+ 
+  tasks:
+  - name: check vars
+    debug:
+     var: controller.PIT.host
+     var: controller_host
+    tags:
+     - debug_vars
+
+  - name: Set facts
+    set_fact:
+     env_name : '{{env_name}}'
+    tags:
+     - debug_vars
+
+  - name: Set PIT
+    set_fact:
+     controller_info : "{{controller.PIT}}"
+    when: "env_name == 'PIT'"
+    tags:
+     - debug_vars
+
+  - name: Set MOT
+    set_fact:
+     controller_info : "{{controller.MOT}}"
+    when: "env_name == 'MOT'"
+
+  - name: Set DDM
+    set_fact:
+     controller_info : "{{controller.DDM}}"
+    when: "env_name == 'DDM'"
+
+  - name: Set PRD
+    set_fact:
+     controller_info : "{{controller.PRD}}"
+    when: "env_name == 'PRD'"
+
+  - name: Remove symlinks from old agent
+    file:
+     path: '{{ item }}'
+     state: absent
+    with_items:
+     - '{{appd_appAgent_home}}'
+     - '{{appd_machineAgent_home}}'
+
+  - name: Create directories, if doesn't exist
+    file:
+     path: '{{ item }}'
+     state: directory
+     mode: 0755
+    with_items:
+     - '{{appd_appAgent_link}}'
+     - '{{appd_machineAgent_link}}'
+
+  - name : Create symlinks
+    file:
+     src: '{{item.src}}'
+     dest: '{{item.dest}}'
+     state: link
+     force: yes
+    with_items:
+     - { src: "{{appd_appAgent_link}}" , dest: "{{appd_appAgent_home}}" }
+     - { src: "{{appd_machineAgent_link}}" ,  dest: "{{appd_machineAgent_home}}" }
+
+  - name: Copy files
+    copy: 
+     src: '{{item.src}}'
+     dest: '{{item.dest}}'
+     owner: '{{appd_user}}'
+     group: '{{appd_group}}'
+     mode: u=rw,g=r,o=r
+    with_items:
+     - { src: "{{appd_template_home}}/{{appd_app_agent_file}}" , dest: "{{appd_appAgent_link}}" }
+     - { src: "{{appd_template_home}}/{{appd_machine_agent_file}}" ,  dest: "{{appd_machineAgent_link}}" }
+
+  - name: Extract files
+    unarchive:
+     src: '{{item.src}}'
+     dest: '{{item.dest}}'
+     remote_src: yes
+    with_items:
+     - { src: "{{appd_appAgent_home}}/{{appd_app_agent_file}}" , dest: "{{appd_appAgent_link}}" }
+     - { src: "{{appd_machineAgent_home}}/{{appd_machine_agent_file}}" ,  dest: "{{appd_machineAgent_link}}" }
+
+  - name: Remove archives
+    file: path="{{ item }}" state=absent
+    with_items:
+     - "{{appd_appAgent_home}}/{{appd_app_agent_file}}"
+     - "{{appd_machineAgent_home}}/{{appd_machine_agent_file}}"
+
+  - name: check java agent
+    command: ps -ef | grep java  | grep -v grep
+    register: java_process
+    ignore_errors: yes
+    tags:
+     - JavaProcess
+
+  - name: create file javaProcess
+    file:
+     path: /opt/AppD/java_process.txt
+     state: touch
+    tags:
+     - JavaProcess
+
+  - name: print if  any java process running or not 
+    shell: echo "There is java process" > /opt/AppD/java_process.txt 
+    when: java_process.stdout != ''
+    tags:
+     - JavaProcess
+
+  - name: print if  any java process running or not 
+    shell: echo "There is no java process" > /opt/AppD/java_process.txt 
+    when: java_process.stdout == ''
+    tags:
+     - JavaProcess
+
+  - name: populate values in template 
+    template:
+     src: '{{item.src}}'
+     dest: '{{item.dest}}'
+     owner: '{{appd_user}}'
+     group: '{{appd_group}}' 
+     mode: u=rwx,g=r,o=r
+    with_items:
+     - { src: "{{appd_template_home}}/append1.j2" , dest: "{{appd_template_home}}/append1" }
+
+  - name: append template file
+    shell: cat {{appd_template_home}}/append1 {{appd_template_home}}/append2 >  {{appd_template_home}}/appdynamicsmachineagent
+
+  - name: copy startup script
+    copy:
+     src: '{{item.src}}'
+     dest: '{{item.dest}}'
+     owner: '{{appd_user}}'
+     group: '{{appd_group}}' 
+     mode: u=rwx,g=r,o=r
+    with_items:
+     - { src: "{{appd_template_home}}/appdynamicsmachineagent" , dest: "/etc/rc.d/init.d/" }
+
+
+
+# copy the template with options
+  - name : Copy template for machine agent with AppD accessKey, controllerhost and port
+    template:
+     src: '{{item.src}}'
+     dest: '{{item.dest}}'
+     owner: '{{appd_user}}'
+     group: '{{appd_group}}' 
+     mode: u=rwx,g=r,o=r
+    with_items:
+     #- { src: "{{appd_template_home}}/machine-agent.j2" , dest: "/etc/init.d/machine-agent" }
+     - { src: "{{appd_template_home}}/controller-info.j2" ,  dest: "{{appd_home}}/controller-info.xml" }
+
+  - name: Add run levels to service machine-agent
+    shell: chkconfig --add appdynamicsmachineagent
+    tags:
+     - service
+
+  - name: Add run levels to service machine-agent
+    shell: chkconfig --level 2345 appdynamicsmachineagent on 
+    tags:
+     - service
+
+#  - name : Add as service and bring up during boot
+#    action: command /sbin/chkconfig machine-agent on 
+    
+  - name: Enable services for automatic start
+    service:
+     name: "{{ item }}"
+     enabled: yes
+    with_items:
+     - appdynamicsmachineagent
+    tags:
+     - service
+   
+
+# bring up the service 
+  - name: bring up machine agent 
+    shell: service appdynamicsmachineagent start 
