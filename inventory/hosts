@@ -1,0 +1,12 @@
+[local]
+aw-lxxxx.deltadev.ent ansible_connection=local
+
+
+[myservers]
+xxx.xx.xxx.xxx
+
+[myservers:vars]
+#ansible_connection=ssh
+#ansible_port=22
+#ansible_user=ga61342
+#ansible_ssh_private_key_file=/home/drajago/Downloads/ansible.pem
